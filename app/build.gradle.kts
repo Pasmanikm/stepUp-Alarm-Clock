@@ -62,6 +62,7 @@ dependencies {
     implementation("com.google.android.horologist:horologist-compose-layout:0.5.16")
     implementation("com.google.android.horologist:horologist-compose-material:0.5.16")
 
+
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.08.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
