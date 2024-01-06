@@ -8,7 +8,10 @@ import android.content.Intent
 class AlarmReceiver : BroadcastReceiver() {
     @SuppressLint("WearRecents")
     override fun onReceive(context: Context, intent: Intent) {
+        println("Alarm received")
+
         val alarmIntent = Intent(context, AlarmActivity::class.java)
+
         alarmIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         context.startActivity(alarmIntent)
     }

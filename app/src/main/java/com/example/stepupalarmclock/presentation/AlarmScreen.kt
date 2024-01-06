@@ -1,58 +1,81 @@
 package com.example.stepupalarmclock.presentation
 
-import android.app.Activity
 import android.content.Context
+import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Text
-import com.google.android.horologist.compose.layout.AppScaffold
 
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun AlarmScreen() {
-    println("Inside AlarmScreen")
+fun AlarmScreen(textToShow: String) {
     val context = LocalContext.current
     val vibratorManager =
         context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
     val vibrator = vibratorManager.defaultVibrator
 
+    val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    val stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+
+    println(context.packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_STEP_DETECTOR))
     // Start vibrating when the screen is shown
     LaunchedEffect(key1 = true) {
         startVibrating(vibrator)
     }
 
-    AppScaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .height(200.dp)
-            .background(Color.Black),
-    ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Button(onClick = {
-                println("Stop vibrating")
+    val stepListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            println("In onSensorChanged")
+
+            if (event.sensor.type == Sensor.TYPE_STEP_DETECTOR) {
+                println("Detected a step")
+                // A step was taken, silence the alarm if not already silenced
                 stopVibrating(vibrator)
-                (context as Activity).finish()
-            }) {
-                Text("Stop vibrating")
+                sensorManager.unregisterListener(this)
             }
         }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+            // Do nothing
+        }
     }
+
+    stepSensor.let {
+        println("Registering step listener")
+        sensorManager.registerListener(stepListener, it, SensorManager.SENSOR_DELAY_FASTEST)
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = textToShow,
+            color = Color.White
+        )
+    }
+}
+
+fun stopVibrating(vibrator: Vibrator) {
+    vibrator.cancel()
 }
 
 fun startVibrating(vibrator: Vibrator) {
@@ -63,6 +86,3 @@ fun startVibrating(vibrator: Vibrator) {
     vibrator.vibrate(repeatingEffect)
 }
 
-fun stopVibrating(vibrator: Vibrator) {
-    vibrator.cancel()
-}

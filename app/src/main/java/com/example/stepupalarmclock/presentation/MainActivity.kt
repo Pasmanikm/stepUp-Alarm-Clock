@@ -26,15 +26,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.android.horologist.composables.TimePicker
 import com.google.android.horologist.compose.layout.AppScaffold
+import java.text.DateFormat.getDateInstance
+import java.text.SimpleDateFormat
 import java.time.LocalTime
 import java.util.Calendar
+import kotlin.random.Random
 
 
 class MainActivity : ComponentActivity() {
+    private lateinit var alarmManagerHelper: AlarmManagerHelper
+
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         println("Start on create")
         super.onCreate(savedInstanceState)
+        alarmManagerHelper = AlarmManagerHelper(this)
         setContent {
             MainContent()
         }
@@ -58,7 +64,7 @@ class MainActivity : ComponentActivity() {
                     onTimeConfirm = { newTime ->
                         // This is where you handle the confirmed time
                         time = newTime
-                        setAlarm(time)
+                        setAlarm(alarmManagerHelper, time)
                     })
             }
         }
@@ -66,27 +72,38 @@ class MainActivity : ComponentActivity() {
 
 
     @RequiresApi(Build.VERSION_CODES.S)
-    private fun setAlarm(time: LocalTime) {
-        if (!getSystemService(AlarmManager::class.java).canScheduleExactAlarms()) {
+    private fun setAlarm(alarmManagerHelper: AlarmManagerHelper, time: LocalTime) {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        if (!alarmManager.canScheduleExactAlarms()) {
             val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
             startActivity(intent)
-        }
+        } else {
+            val intent = Intent(this, AlarmReceiver::class.java)
+            val uniqueId = generateUniqueIdForAlarm()
 
-        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(this, AlarmReceiver::class.java)
-        val pendingIntent =
-            PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, time.hour)
-            set(Calendar.MINUTE, time.minute)
-            set(Calendar.SECOND, 0)
-        }
+            val pendingIntent = PendingIntent.getBroadcast(
+                this,
+                uniqueId,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE
+            )
 
-        alarmManager.setExact(
-            AlarmManager.RTC_WAKEUP,
-            calendar.timeInMillis,
-            pendingIntent
-        )
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, time.hour)
+                set(Calendar.MINUTE, time.minute)
+                set(Calendar.SECOND, 0)
+            }
+
+            alarmManagerHelper.setAlarm(uniqueId, calendar.timeInMillis, pendingIntent)
+            val format = getDateInstance(SimpleDateFormat.SHORT)
+
+            println("Good bye, see you at ${format.format(calendar.time)}")
+        }
+    }
+
+    private fun generateUniqueIdForAlarm(): Int {
+        return Random.nextInt()
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
