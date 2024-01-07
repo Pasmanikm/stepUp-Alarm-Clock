@@ -83,10 +83,12 @@ fun AlarmScreen(
 }
 
 fun stopVibrating(vibrator: Vibrator) {
+    println("Stop vibrating")
     vibrator.cancel()
 }
 
 fun startVibrating(vibrator: Vibrator) {
+    println("Start vibrating")
     val timings: LongArray = longArrayOf(50, 50, 100, 50, 50)
     val amplitudes: IntArray = intArrayOf(64, 128, 255, 128, 64)
     val repeat = 1 // Repeat from the second entry, index = 1.
