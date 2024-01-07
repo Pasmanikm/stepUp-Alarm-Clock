@@ -53,7 +53,7 @@ fun AlarmScreen(
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-                println("onAccuracyChanged but IDGAF")
+                println("onAccuracyChanged")
             }
         }
 
