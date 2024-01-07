@@ -1,9 +1,11 @@
 package com.example.stepupalarmclock.presentation
 
+import android.Manifest
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -24,6 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.example.stepupalarmclock.presentation.alarm.AlarmReceiver
 import com.google.android.horologist.composables.TimePicker
 import com.google.android.horologist.compose.layout.AppScaffold
 import java.text.DateFormat.getDateInstance
@@ -34,13 +39,57 @@ import kotlin.random.Random
 
 
 class MainActivity : ComponentActivity() {
-    private lateinit var alarmManagerHelper: AlarmManagerHelper
+    companion object {
+        private const val REQUEST_ACTIVITY_RECOGNITION_PERMISSION = 1
+    }
+
+    // State to track whether the permission is granted
+    private var isPermissionGranted = false
+
+    override fun onStart() {
+        println("In onStart")
+        super.onStart()
+        checkAndRequestActivityRecognitionPermission()
+    }
+
+    private fun checkAndRequestActivityRecognitionPermission() {
+        println("In checkAndRequestActivityRecognitionPermission")
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            println("Permission is not granted")
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
+                REQUEST_ACTIVITY_RECOGNITION_PERMISSION
+            )
+        } else {
+            println("Permission is already granted")
+            isPermissionGranted = true
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        println("In onRequestPermissionsResult")
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            REQUEST_ACTIVITY_RECOGNITION_PERMISSION -> {
+                isPermissionGranted =
+                    grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                if (!isPermissionGranted) {
+                    println("Permission is required for this app to function")
+                }
+            }
+        }
+    }
 
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
-        println("Start on create")
         super.onCreate(savedInstanceState)
-        alarmManagerHelper = AlarmManagerHelper(this)
         setContent {
             MainContent()
         }
@@ -50,6 +99,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun MainContent() {
         var time by remember { mutableStateOf(LocalTime.now()) }
+
 
         AppScaffold(
             modifier = Modifier
@@ -64,7 +114,7 @@ class MainActivity : ComponentActivity() {
                     onTimeConfirm = { newTime ->
                         // This is where you handle the confirmed time
                         time = newTime
-                        setAlarm(alarmManagerHelper, time)
+                        setAlarm(time)
                     })
             }
         }
@@ -72,7 +122,7 @@ class MainActivity : ComponentActivity() {
 
 
     @RequiresApi(Build.VERSION_CODES.S)
-    private fun setAlarm(alarmManagerHelper: AlarmManagerHelper, time: LocalTime) {
+    private fun setAlarm(time: LocalTime) {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         if (!alarmManager.canScheduleExactAlarms()) {
@@ -94,10 +144,9 @@ class MainActivity : ComponentActivity() {
                 set(Calendar.MINUTE, time.minute)
                 set(Calendar.SECOND, 0)
             }
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
 
-            alarmManagerHelper.setAlarm(uniqueId, calendar.timeInMillis, pendingIntent)
             val format = getDateInstance(SimpleDateFormat.SHORT)
-
             println("Good bye, see you at ${format.format(calendar.time)}")
         }
     }

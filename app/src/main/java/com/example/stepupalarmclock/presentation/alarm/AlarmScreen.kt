@@ -1,4 +1,4 @@
-package com.example.stepupalarmclock.presentation
+package com.example.stepupalarmclock.presentation.alarm
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,7 +26,9 @@ import androidx.wear.compose.material.Text
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun AlarmScreen(textToShow: String) {
+fun AlarmScreen(
+    textToShow: String, onStepDetected: () -> Unit
+) {
     val context = LocalContext.current
     val vibratorManager =
         context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
@@ -34,32 +37,38 @@ fun AlarmScreen(textToShow: String) {
     val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     val stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
 
-    println(context.packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_STEP_DETECTOR))
-    // Start vibrating when the screen is shown
-    LaunchedEffect(key1 = true) {
+    LaunchedEffect(key1 = Unit) {
         startVibrating(vibrator)
     }
 
-    val stepListener = object : SensorEventListener {
-        override fun onSensorChanged(event: SensorEvent) {
-            println("In onSensorChanged")
+    DisposableEffect(key1 = Unit) {
+        val stepListener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                println("In onSensorChanged")
+                if (event.sensor.type == Sensor.TYPE_STEP_DETECTOR) {
+                    println("Detected a step")
+                    stopVibrating(vibrator)
+                    sensorManager.unregisterListener(this)
+                    onStepDetected()
+                }
+            }
 
-            if (event.sensor.type == Sensor.TYPE_STEP_DETECTOR) {
-                println("Detected a step")
-                // A step was taken, silence the alarm if not already silenced
-                stopVibrating(vibrator)
-                sensorManager.unregisterListener(this)
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+                println("onAccuracyChanged but IDGAF")
             }
         }
 
-        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-            // Do nothing
+        stepSensor?.let {
+            println("Registering step listener")
+            sensorManager.registerListener(stepListener, it, SensorManager.SENSOR_DELAY_FASTEST)
         }
-    }
 
-    stepSensor.let {
-        println("Registering step listener")
-        sensorManager.registerListener(stepListener, it, SensorManager.SENSOR_DELAY_FASTEST)
+        onDispose {
+            println("Disposing of step listener")
+            stepSensor?.let {
+                sensorManager.unregisterListener(stepListener)
+            }
+        }
     }
 
     Column(

@@ -1,9 +1,10 @@
-package com.example.stepupalarmclock.presentation
+package com.example.stepupalarmclock.presentation.alarm
 
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.example.stepupalarmclock.presentation.AlarmActivity
 
 class AlarmReceiver : BroadcastReceiver() {
     @SuppressLint("WearRecents")
