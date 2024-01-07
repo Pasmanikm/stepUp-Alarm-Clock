@@ -1,7 +1,6 @@
 package com.example.stepupalarmclock.presentation.alarm
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
